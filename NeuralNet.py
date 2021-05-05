@@ -69,6 +69,9 @@ class Net:
         self.output_size = output_size
         self.layer_list = self.create_layer_list()
 
+        self.sig = Sigmoid()
+        self.relu = ReLU()
+
     def create_layer_list(self):
         """Creates the list with the net layers"""
         layer_list = list()
@@ -79,6 +82,20 @@ class Net:
         layer_list.append(Layer(input_length=self.layer_size, n_neurons=self.output_size))
 
         return layer_list
+
+    def forward_loop(self, layer_list, input_data):
+        network_size = len(layer_list)+1
+        data_list = list()
+        data_list.append((input_data, 0))
+        for l in range(network_size-1):
+            z = layer_list[l].forward(data_list[-1][0])
+            a = self.sig.sigmoid(z)
+            data_list.append((a, z))
+
+        return data_list
+
+    def back_prop(self, data_list, input_data, output_data, layer_list):
+        pass
 
 
 class ReLU:
@@ -100,22 +117,3 @@ class Sigmoid:
     def derivative_sigmoid(self, x):
         return self.sigmoid(x)*(1-self.sigmoid(x))
 
-
-class Train:
-    def __init__(self):
-        self.sig = Sigmoid()
-        self.relu = ReLU()
-
-    def forward_loop(self, layer_list, input_data):
-        network_size = len(layer_list)+1
-        data_list = list()
-        data_list.append((input_data, 0))
-        for l in range(network_size-1):
-            z = layer_list[l].forward(data_list[-1][0])
-            a = self.sig.sigmoid(z)
-            data_list.append((a, z))
-
-        return data_list
-
-    def back_prop(self, data_list, input_data, output_data, layer_list):
-        pass
