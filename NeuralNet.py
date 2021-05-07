@@ -109,7 +109,7 @@ class Net:
             
         return data_list
         
-    def weight_matrix_list(self):
+    def create_weight_matrix_list(self):
         weight_matrix_list=[]
         for l in range(len(self.layer_list)):
             neuron_weights=self.layer_list[l].as_weight_matrix().T
@@ -120,18 +120,19 @@ class Net:
         return weight_matrix_list
     
     
-    def get_delta(self, data_list, output_values, layer_list):
+    def get_delta(self, data_list, output_values, layer_list, weight_matrix_list):
         lista_delta=[]
         
-        lista_delta.append(data_list[-1][0]-output_values)
+        lista_delta.append(data_list[-1][2]-output_values)
         
         for l in reversed(range(len(layer_list)-1)):
             
-            weight= layer_list[l+1].as_weight_matrix()
+            weight= weight_matrix_list[l+1].T
             layer_derivate=self.sig.derivative_sigmoid(data_list[l+1][1])
             
+            error=np.dot(weight,lista_delta[0])
             
-            new_error= np.dot(weight,lista_delta[0]) * layer_derivate
+            new_error= error * layer_derivate
             
             # print("insert"+str(l))
             lista_delta.insert(0, new_error)
@@ -142,6 +143,7 @@ class Net:
     def back_prop(self, input_data, output_data, layer_list):
         
         Delta_matrix=self.create_matrix_Delta()
+        weight_matrix_list=self.create_weight_matrix_list()
         
         if output_data.shape == (output_data.shape[0],):
             output_values=np.reshape(output_data.values, (output_data.shape[0], 1))
@@ -151,7 +153,7 @@ class Net:
         
         for k in range(input_data.shape[0]):
             forwardprop_data=self.forward_prop(self.layer_list, input_data.values[k])
-            delta_list=self.get_delta(forwardprop_data, output_values[k], self.layer_list)
+            delta_list=self.get_delta(forwardprop_data, output_values[k], self.layer_list, weight_matrix_list)
             
             for l in range(len(self.layer_list)):
                 
