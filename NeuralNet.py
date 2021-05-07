@@ -45,7 +45,7 @@ class Layer:
             self.neurons.append(
                 Neuron(self.input_length)
             )
-            
+    
     def as_weight_matrix(self):
         """Represents layer's weights as a matrix, where each column is a neuron.
         """
@@ -100,33 +100,36 @@ class Net:
     def forward_prop(self, layer_list, input_values):
         network_size = len(layer_list)+1
         data_list = list()
-        data_list.append((input_values, 0))
+        data_list.append((input_values, 0, np.insert(input_values, 0, 1)))
         for l in range(network_size-1):
             z = layer_list[l].forward(data_list[-1][0])
             a = self.sig.sigmoid(z)
-            data_list.append((a, z))
-
+            n = np.insert(a, 0, 1)
+            data_list.append((a, z, n))
+            
         return data_list
-
+        
+    def weight_matrix_list(self):
+        weight_matrix_list=[]
+        for l in range(len(self.layer_list)):
+            neuron_weights=self.layer_list[l].as_weight_matrix().T
+            bias=np.array(self.layer_list[l].as_bias_matrix())
+            bias_weights= np.reshape(bias, (bias.shape[0],1))
+            weight_matrix_list.append(np.concatenate((bias_weights, neuron_weights), axis = 1))
+        
+        return weight_matrix_list
+    
+    
     def get_delta(self, data_list, output_values, layer_list):
         lista_delta=[]
         
-        # if data_list[-1][0].shape == (data_list[-1][0].shape[0],):
-        #     lista_delta.append(np.reshape((data_list[-1][0]-output_values), (data_list[-1][0].shape[0],1)))
-        # else:
-        
         lista_delta.append(data_list[-1][0]-output_values)
-        
         
         for l in reversed(range(len(layer_list)-1)):
             
             weight= layer_list[l+1].as_weight_matrix()
             layer_derivate=self.sig.derivative_sigmoid(data_list[l+1][1])
             
-            # if layer_derivate.shape==(layer_derivate.shape[0],):
-            #     layer_derivate=np.reshape(layer_derivate,(layer_derivate.shape[0],1))
-            
-           
             
             new_error= np.dot(weight,lista_delta[0]) * layer_derivate
             
@@ -135,10 +138,6 @@ class Net:
         
         return lista_delta
     
-    def atualiza_Delta_matrix(self, a_array, next_delta_array):
-        pass
-    
-               # self.atualiza_Delta_matrix(forwardprop_data[l][0], delta_list[l])
     
     def back_prop(self, input_data, output_data, layer_list):
         
@@ -162,9 +161,9 @@ class Net:
         
         print(Delta_matrix)
         
-        D_matrix=self.create_matrix_Delta()
-        for l in range(len(self.layer_list)):
-            D_matrix[l]=1/input_data.shape[0] * Delta_matrix[l] + learning_factor * self.layer_list(l)
+        # D_matrix=self.create_matrix_Delta()
+        # for l in range(len(self.layer_list)):
+        #     D_matrix[l]=1/input_data.shape[0] * Delta_matrix[l] + learning_factor * self.layer_list(l)
         
             
         
