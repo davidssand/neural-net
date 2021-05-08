@@ -111,10 +111,13 @@ class Net:
 
     def raw_forward_prop(self, input_values):
         layers_outputs = list()
-        layers_outputs.append(input_values)
+        aux_list = list()
+        layers_outputs.append((input_values, np.insert(input_values, 0, 1)))
         for layer in self.layer_list:
-            z = layer.forward(layers_outputs[-1])
-            a = self.sig.sigmoid(z)
+            z = layer.forward(layers_outputs[-1][0])
+            aux = self.sig.sigmoid(z)
+            a = np.insert(aux, 0, 1)
+            aux_list.append(aux)
             layers_outputs.append(a)
 
         return layers_outputs
@@ -124,31 +127,30 @@ class Net:
         #  [peso_n1, peso_n2, peso_n3, peso_n4],               hl_2
         #  [peso_n1]]                                          out_l
         weight_matrix_list = []
-        for l in range(len(self.layer_list)):
-            neuron_weights = self.layer_list[l].as_weight_matrix().T
-            bias = np.array(self.layer_list[l].as_bias_matrix())
-            bias_weights = np.reshape(bias, (bias.shape[0], 1))
-            weight_matrix_list.append(np.concatenate((bias_weights, neuron_weights), axis=1))
+        for layer in self.layer_list:
+            neuron_weights = layer.as_weight_matrix().T
+            bias_matrix = np.array(layer.as_bias_matrix())  # [1, 1, 1, 1, 1] (5) [[1, 1, 1, 1, 1]]
+            bias_column_matrix = np.reshape(bias_matrix, (bias_matrix.shape[0], 1))  # [[1], [1], [1], [1], [1]]
+            weight_matrix_list.append(np.concatenate((bias_column_matrix, neuron_weights), axis=1))
 
         return weight_matrix_list
 
-    def get_delta(self, data_list, output_values, layer_list, weight_matrix_list):
-        lista_delta = []
+    def get_delta(self, layers_output, output_values, weight_matrix_list):
+        list_delta = list()
 
-        lista_delta.append(data_list[-1][2] - output_values)
+        output_error = layers_output[-1] - output_values
+        if output_error.shape == (output_error.shape[0],):
+            output_error = np.reshape(output_error, (output_error.shape[0], 1))
 
-        for l in reversed(range(len(layer_list) - 1)):
-            weight = weight_matrix_list[l + 1].T
-            layer_derivate = self.sig.derivative_sigmoid(data_list[l + 1][1])
+        list_delta.append(output_error)
 
-            error = np.dot(weight, lista_delta[0])
+        for i in reversed(range(len(self.layer_list) - 1)):
+            weight = weight_matrix_list[i + 1]
+            layer_derivative = layers_output[i] * (1 - layers_output[i])
+            error = np.dot(weight, list_delta[0]) * layer_derivative
+            list_delta.insert(0, error)
 
-            new_error = error * layer_derivate
-
-            # print("insert"+str(l))
-            lista_delta.insert(0, new_error)
-
-        return lista_delta
+        return list_delta
 
     def back_prop(self, input_data, output_data, layer_list):
 
@@ -190,13 +192,19 @@ class ReLU():
         return np.maximum(0, inputs)
 
 
+
+
 layer1 = Layer(input_length=X.shape[1], n_neurons=3)
 layer2 = Layer(input_length=3, n_neurons=2)
 
 wm = layer1.as_weight_matrix()
 
 exp_net = Net(hidden_layers_size=4, hidden_layers_amount=2, input_size=X.shape[1], output_size=1)
-layers_output_list = exp_net.raw_forward_prop(X.values[0])
+
+layers_output = exp_net.raw_forward_prop(X.values[0])
+
+exp_net.get_delta(layers_output, y.values[0], exp_net.create_weight_matrix_list())
+
 layers_output_list2 = exp_net.forward_prop(exp_net.layer_list, X.values[0])
 
 NeuNet = Net(layer_size=4, hidden_layers=2, input_size=X.shape[1], output_size=1)
