@@ -7,9 +7,7 @@
 # - Prof. Eric Aislan Antonelo
 # 
 # ### Grupo
-# - Yohannes
-# - Gustavo Albino
-# - David Sand
+# -
 # 
 # ### Opção: 1
 # 
@@ -47,7 +45,7 @@
 # Entregue o código, PDF do relatório e o arquivo de video pelo Moodle (zipado com
 # ZIP ou tar.gz).
 
-# In[1]:
+# In[9]:
 
 
 import pandas as pd
@@ -66,6 +64,7 @@ from sklearn.neural_network import MLPClassifier
 from numpy import genfromtxt
 from sklearn.preprocessing import StandardScaler
 import random
+import itertools
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -81,7 +80,7 @@ logger.setLevel(logging.INFO)
 
 # ### Data source
 
-# In[2]:
+# In[10]:
 
 
 df = pd.read_csv('classification2.txt', header=None)
@@ -93,7 +92,7 @@ df.head()
 
 # ### Correlation Matrix
 
-# In[3]:
+# In[11]:
 
 
 corr = df.corr()
@@ -109,7 +108,7 @@ plt.show()
 
 # ### Neural net data structure
 
-# In[4]:
+# In[12]:
 
 
 # To ADD / REMOVE bias
@@ -123,7 +122,7 @@ plt.show()
 #previous_deltas = new_deltas[:-1] # Exclude bias delta
 
 
-# In[5]:
+# In[13]:
 
 
 def sigmoid(x):
@@ -234,11 +233,6 @@ class NeuralNet():
         """
         return np.array([l.weights_matrix for l in self.layers], dtype=object)
      
-    @property
-    def der_weights_matrix(self):
-        """Represents layer's derivative weights as a matrix, where each column is a neuron.
-        """
-        return np.array([l.weights_der for l in self.layers], dtype=object)
     
     @weights_matrix.setter
     def weights_matrix(self, new_weights):
@@ -263,6 +257,8 @@ class NeuralNet():
 
     def backpropagate(self, X, hx, y):
         loss_der =  np.divide(1 - y, np.maximum(1 - hx, 0.00001)) - np.divide(y, np.maximum(hx, 0.00001))
+        
+        reversed_layers = self.layers[::-1]
         
         deltas = self.last_layer_der_activation_function(hx) * loss_der
         
@@ -289,9 +285,12 @@ class NeuralNet():
 
             layer.weights_der = np.dot(next_activation_biased.T, deltas)
             
+            
+        
     def update_weights(self):
         for layer in self.layers:
             layer.weights_matrix -= self.learning_rate * layer.weights_der.T / len(X)
+            
             
     def plot_cost(self):
         plt.plot(self.costs)
@@ -356,7 +355,7 @@ def plot_boundary_frontier(X, y, title=None, h=0.02):
 
 # # Define dataset and train model
 
-# In[8]:
+# In[14]:
 
 
 # Define features and label
@@ -374,7 +373,7 @@ X_train = sc.transform(X_train)
 X_test = sc.transform(X_test)
 
 # Define model's layers
-hidden_layer_sizes = [200, 100]
+hidden_layer_sizes = [30, 20]
 layers = [
     Layer(input_length=X_train.shape[1], n_neurons=hidden_layer_sizes[0]),
     Layer(input_length=hidden_layer_sizes[0], n_neurons=hidden_layer_sizes[1]),
@@ -396,7 +395,7 @@ nn_preds_round = nn_preds.round()
 
 # ## Train and evaluate sklearn models for comparison
 
-# In[ ]:
+# In[15]:
 
 
 cls = LogisticRegression()
@@ -412,7 +411,7 @@ mlp_preds = cls.predict(X_test)
 
 # #### Real Labels
 
-# In[ ]:
+# In[16]:
 
 
 plot_outputs(X_test, y_test.ravel(), title='Real labels')
@@ -420,7 +419,7 @@ plot_outputs(X_test, y_test.ravel(), title='Real labels')
 
 # #### NeuralNet Predictions
 
-# In[ ]:
+# In[17]:
 
 
 print_metrics(y_test, nn_preds_round)
@@ -430,7 +429,7 @@ plot_boundary_frontier(X_test, y_test.ravel(), title="Final Boundary Frontier Co
 
 # #### Sklearn LogisticRegression predictions
 
-# In[ ]:
+# In[18]:
 
 
 print_metrics(y_test.ravel(), lr_preds)
@@ -439,66 +438,21 @@ plot_outputs(X_test, lr_preds, title="Sklearn's LogisticRegression predictions")
 
 # #### Sklearn MLPClassifier predictions
 
-# In[ ]:
+# In[19]:
 
 
 print_metrics(y_test.ravel(), mlp_preds)
 plot_outputs(X_test, mlp_preds, title="Sklearn's MLPClassifier predictions")
 
 
-# #### Fronteira de decisão não linear
-
 # In[ ]:
 
 
-import itertools
-new = [it for sublist in list(itertools.chain.from_iterable(nn.weights_matrix)) for it in sublist]
 
-
-# In[ ]:
-
-
-nn.weights_matrix
 
 
 # In[ ]:
 
 
-nn.weights_matrix.reshape(-1)
 
-
-# #### Calculo do gradient check
-
-# In[ ]:
-
-
-def gradient_check(X, y, nn, epsilon=1e-7):
-    i=random.randint(0, X.shape[0]-1)
-    X=np.reshape(np.array([X[i]]),(1,2))
-    hx = nn.transform(X)
-    nn.backpropagate(X, hx, y)
-    
-    J_plus = cost_not_sum(X+epsilon, y)
-    J_minus = cost_not_sum(X-epsilon, y)
-    
-    numeric_gradient=(j_plus - j_minus)/2*epsilon
-    
-    numerator = norm(nn.der_weights_matrix - numeric_gradient)
-    denominator = norm(numeric_gradient) + norm(nn.der_weights_matrix)
-    difference = numerator / denominator
-    print(difference)
-    
-def cost_not_sum(self, X, y):
-    hx = self.transform(X)
-        
-    log1_hx = np.log(hx)
-    log2_hx = np.log(1 - hx)
-        
-    y_1 = y * log1_hx
-    y_0 = (1 - y) * log2_hx
-
-    return y_0+y_1
-
-gradient_check(X_train, y_train, nn)
-    
 
